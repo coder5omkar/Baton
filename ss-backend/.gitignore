@@ -1,0 +1,12 @@
+.gradle/
+build/
+out/
+.idea/
+*.iml
+.DS_Store
+build-output.txt
+test-output.txt
+integration-output.txt
+bootjar-output.txt
+*-smoke.log
+*-smoke.err

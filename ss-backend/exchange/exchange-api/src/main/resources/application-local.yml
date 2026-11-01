@@ -1,0 +1,10 @@
+server:
+  port: ${PORT:18080}
+spring:
+  datasource:
+    url: ${EXCHANGE_DB_URL:jdbc:postgresql://localhost:15432/exchange}
+  flyway:
+    locations: classpath:db/migration,classpath:db/dev
+logging:
+  level:
+    com.acme: DEBUG
