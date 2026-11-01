@@ -7,9 +7,11 @@ import com.acme.exchange.domain.DeliveryMode;
 import com.acme.exchange.domain.EnvelopeValidator;
 import com.acme.exchange.domain.FlowGate;
 import com.acme.exchange.domain.FlowNotActiveException;
+import com.acme.exchange.domain.FlowSchemaValidator;
 import com.acme.exchange.domain.FlowState;
 import com.acme.exchange.domain.MessageIdConflictException;
 import com.acme.exchange.domain.PublishCommand;
+import com.acme.exchange.domain.SchemaValidationException;
 import com.acme.exchange.domain.StaleRevisionException;
 import com.acme.exchange.domain.SubscriberBinding;
 import com.acme.exchange.domain.ValidatedEnvelope;
@@ -35,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -55,6 +58,8 @@ class PublishServiceTest {
     private CatalogRepository catalogRepository;
     @Mock
     private EnvelopeValidator envelopeValidator;
+    @Mock
+    private FlowSchemaValidator flowSchemaValidator;
 
     private final ExchangeProperties properties = new ExchangeProperties();
     private final JsonMapper mapper = JsonMapper.builder().build();
@@ -70,6 +75,7 @@ class PublishServiceTest {
                 outboxRepository,
                 catalogRepository,
                 envelopeValidator,
+                flowSchemaValidator,
                 properties);
     }
 
@@ -86,6 +92,8 @@ class PublishServiceTest {
                 .thenReturn(Optional.of(gate));
         when(messageRepository.find("tenant-dev", "orders", "msg-1"))
                 .thenReturn(Optional.empty());
+        when(catalogRepository.findSchema("tenant-dev", "orders", 1L))
+                .thenReturn(Optional.of("{\"type\":\"object\"}"));
         when(messageRepository.insertIfAbsent(any(), any(), eq("msg-1"), eq("hash-1"), any()))
                 .thenReturn(Optional.of(accepted));
         when(catalogRepository.findSubscribers("tenant-dev", "orders", 1L))
@@ -95,8 +103,52 @@ class PublishServiceTest {
 
         assertThat(result.messageId()).isEqualTo("msg-1");
         assertThat(result.replayed()).isFalse();
+        verify(flowSchemaValidator).validate("{\"type\":\"object\"}", envelope);
         verify(messageSubscriberRepository).insertExpected(accepted, List.of(binding));
         verify(outboxRepository).enqueue(accepted);
+    }
+
+    @Test
+    void rejectsAnEnvelopeThatDoesNotMatchTheFlowSchema() {
+        when(envelopeValidator.validate(any(), anyInt()))
+                .thenReturn(new ValidatedEnvelope("msg-1", "hash-1", 100));
+        when(flowGateRepository.lockForAdmission("tenant-dev", "orders"))
+                .thenReturn(Optional.of(activeGate(1L)));
+        when(messageRepository.find("tenant-dev", "orders", "msg-1"))
+                .thenReturn(Optional.empty());
+        when(catalogRepository.findSchema("tenant-dev", "orders", 1L))
+                .thenReturn(Optional.of("{\"type\":\"object\"}"));
+        doThrow(new SchemaValidationException("bad envelope", List.of("data.orderId is required")))
+                .when(flowSchemaValidator).validate(any(), any());
+
+        assertThatThrownBy(() -> service.accept(
+                new PublishCommand("tenant-dev", "orders", 1L, envelope())))
+                .isInstanceOf(SchemaValidationException.class)
+                .hasMessageContaining("bad envelope");
+
+        verify(messageRepository, never()).insertIfAbsent(any(), any(), any(), any(), any());
+        verifyNoInteractions(outboxRepository);
+    }
+
+    @Test
+    void rejectsWhenNoSchemaExistsForTheActiveRevision() {
+        when(envelopeValidator.validate(any(), anyInt()))
+                .thenReturn(new ValidatedEnvelope("msg-1", "hash-1", 100));
+        when(flowGateRepository.lockForAdmission("tenant-dev", "orders"))
+                .thenReturn(Optional.of(activeGate(1L)));
+        when(messageRepository.find("tenant-dev", "orders", "msg-1"))
+                .thenReturn(Optional.empty());
+        when(catalogRepository.findSchema("tenant-dev", "orders", 1L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.accept(
+                new PublishCommand("tenant-dev", "orders", 1L, envelope())))
+                .isInstanceOf(SchemaValidationException.class)
+                .hasMessageContaining("No schema configured");
+
+        verifyNoInteractions(flowSchemaValidator);
+        verify(messageRepository, never()).insertIfAbsent(any(), any(), any(), any(), any());
+        verifyNoInteractions(outboxRepository);
     }
 
     @Test

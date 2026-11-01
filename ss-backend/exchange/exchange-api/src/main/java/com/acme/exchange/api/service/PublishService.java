@@ -6,8 +6,10 @@ import com.acme.exchange.domain.AcceptedMessage;
 import com.acme.exchange.domain.EnvelopeValidator;
 import com.acme.exchange.domain.FlowGate;
 import com.acme.exchange.domain.FlowNotActiveException;
+import com.acme.exchange.domain.FlowSchemaValidator;
 import com.acme.exchange.domain.MessageIdConflictException;
 import com.acme.exchange.domain.PublishCommand;
+import com.acme.exchange.domain.SchemaValidationException;
 import com.acme.exchange.domain.StaleRevisionException;
 import com.acme.exchange.domain.SubscriberBinding;
 import com.acme.exchange.domain.ValidatedEnvelope;
@@ -31,6 +33,7 @@ public class PublishService {
     private final OutboxRepository outboxRepository;
     private final CatalogRepository catalogRepository;
     private final EnvelopeValidator envelopeValidator;
+    private final FlowSchemaValidator flowSchemaValidator;
     private final ExchangeProperties properties;
 
     public PublishService(
@@ -40,6 +43,7 @@ public class PublishService {
             OutboxRepository outboxRepository,
             CatalogRepository catalogRepository,
             EnvelopeValidator envelopeValidator,
+            FlowSchemaValidator flowSchemaValidator,
             ExchangeProperties properties
     ) {
         this.flowGateRepository = flowGateRepository;
@@ -48,6 +52,7 @@ public class PublishService {
         this.outboxRepository = outboxRepository;
         this.catalogRepository = catalogRepository;
         this.envelopeValidator = envelopeValidator;
+        this.flowSchemaValidator = flowSchemaValidator;
         this.properties = properties;
     }
 
@@ -77,6 +82,13 @@ public class PublishService {
         if (existing.isPresent()) {
             return replayOrConflict(existing.get(), validated.contentHash());
         }
+
+        long activeRevision = gate.requireActiveRevision();
+        String schemaJson = catalogRepository.findSchema(
+                        command.tenantId(), command.flowId(), activeRevision)
+                .orElseThrow(() -> new SchemaValidationException(
+                        "No schema configured for active revision " + activeRevision));
+        flowSchemaValidator.validate(schemaJson, command.envelope());
 
         Optional<AcceptedMessage> inserted = messageRepository.insertIfAbsent(
                 command,

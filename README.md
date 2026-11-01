@@ -15,6 +15,7 @@ The backend currently implements durable publish acceptance and the
 transactional outbox path:
 
 - `POST /v1/flows/{flowId}/messages`
+- CloudEvents and active-revision JSON Schema validation
 - message, expected subscriber snapshot, and outbox row committed in one
   transaction before `202 Accepted`
 - idempotent replay and message-ID conflict detection

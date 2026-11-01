@@ -7,6 +7,8 @@ This first slice implements the **publish acceptance path** and the
 **transactional outbox dispatcher**:
 
 - CloudEvents 1.0 envelope validation and inline payload limit.
+- Flow-specific JSON Schema validation against the active revision
+  (`422 SCHEMA_VALIDATION_FAILED`).
 - Canonical content hash for idempotency.
 - `SELECT ... FOR SHARE` admission gate, ready for exclusive activation.
 - One SQL transaction writes the message, the expected subscriber snapshot, and
@@ -115,11 +117,9 @@ The integration test class is tagged `integration` and skipped by the normal
 
 ## Next slices
 
-1. Flow-specific JSON Schema validation from `catalog_schema`
-   (`422 SCHEMA_VALIDATION_FAILED`).
-2. Polling lease/renew/settle endpoints and the `delivery` state machine.
-3. Webhook bridge with HMAC signing, retry budgets, and quarantine.
-4. Receipt ingest, immutable history, and processing projection.
-5. Service Bus adapter and dynamic receiver/stager.
-6. Replay operations and DLQ recovery.
-7. Control plane (`control-api`, Temporal lifecycle worker, Terraform jobs).
+1. Polling lease/renew/settle endpoints and the `delivery` state machine.
+2. Webhook bridge with HMAC signing, retry budgets, and quarantine.
+3. Receipt ingest, immutable history, and processing projection.
+4. Service Bus adapter and dynamic receiver/stager.
+5. Replay operations and DLQ recovery.
+6. Control plane (`control-api`, Temporal lifecycle worker, Terraform jobs).

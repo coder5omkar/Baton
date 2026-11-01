@@ -5,6 +5,7 @@ import com.acme.exchange.domain.FlowNotActiveException;
 import com.acme.exchange.domain.MessageIdConflictException;
 import com.acme.exchange.domain.MessageNotFoundException;
 import com.acme.exchange.domain.PayloadTooLargeException;
+import com.acme.exchange.domain.SchemaValidationException;
 import com.acme.exchange.domain.StaleRevisionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +33,17 @@ public class ProblemDetailsExceptionHandler {
     ResponseEntity<ProblemDetail> handleEnvelopeValidation(EnvelopeValidationException exception) {
         return problem(HttpStatus.UNPROCESSABLE_CONTENT, "ENVELOPE_INVALID",
                 exception.getMessage(), false);
+    }
+
+    @ExceptionHandler(SchemaValidationException.class)
+    ResponseEntity<ProblemDetail> handleSchemaValidation(SchemaValidationException exception) {
+        ResponseEntity<ProblemDetail> response = problem(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "SCHEMA_VALIDATION_FAILED",
+                exception.getMessage(),
+                false);
+        response.getBody().setProperty("errors", exception.errors());
+        return response;
     }
 
     @ExceptionHandler(FlowNotActiveException.class)

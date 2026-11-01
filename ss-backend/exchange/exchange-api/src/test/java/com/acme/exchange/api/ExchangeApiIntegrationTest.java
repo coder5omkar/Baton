@@ -55,7 +55,7 @@ class ExchangeApiIntegrationTest {
                   "id": "it-1",
                   "source": "test",
                   "type": "order.created",
-                  "data": {"amount": 42.5}
+                  "data": {"orderId": "123", "amount": 42.5}
                 }
                 """;
 
@@ -86,6 +86,28 @@ class ExchangeApiIntegrationTest {
         assertThat(status.statusCode()).isEqualTo(200);
         assertThat(status.body()).contains("\"state\":\"PUBLISHING\"");
         assertThat(status.body()).contains("\"expectedSubscribers\":2");
+    }
+
+    @Test
+    void rejectsAnEnvelopeThatDoesNotMatchTheActiveSchema() throws Exception {
+        String body = """
+                {
+                  "specversion": "1.0",
+                  "id": "it-schema-invalid",
+                  "source": "test",
+                  "type": "order.created",
+                  "data": {"amount": 42.5}
+                }
+                """;
+
+        HttpResponse<String> response = post("/v1/flows/orders/messages", body);
+
+        assertThat(response.statusCode()).isEqualTo(422);
+        assertThat(response.body()).contains("SCHEMA_VALIDATION_FAILED");
+        assertThat(count("select count(*) from message where message_id = 'it-schema-invalid'"))
+                .isZero();
+        assertThat(count("select count(*) from publish_outbox where message_id = 'it-schema-invalid'"))
+                .isZero();
     }
 
     private HttpResponse<String> post(String path, String body) throws Exception {

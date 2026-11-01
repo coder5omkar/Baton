@@ -6,6 +6,7 @@ import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public class CatalogRepository {
@@ -29,5 +30,14 @@ public class CatalogRepository {
                         record.get("required", Boolean.class),
                         record.get("binding_revision", Long.class)
                 ));
+    }
+
+    public Optional<String> findSchema(String tenantId, String flowId, long revision) {
+        return dsl.resultQuery("""
+                        select schema_json::text
+                        from catalog_schema
+                        where tenant_id = ? and flow_id = ? and revision = ?
+                        """, tenantId, flowId, revision)
+                .fetchOptional(0, String.class);
     }
 }
