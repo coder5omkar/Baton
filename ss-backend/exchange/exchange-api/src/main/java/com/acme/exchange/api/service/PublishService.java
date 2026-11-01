@@ -14,6 +14,7 @@ import com.acme.exchange.domain.StaleRevisionException;
 import com.acme.exchange.domain.SubscriberBinding;
 import com.acme.exchange.domain.ValidatedEnvelope;
 import com.acme.exchange.persistence.CatalogRepository;
+import com.acme.exchange.persistence.DeliveryRepository;
 import com.acme.exchange.persistence.FlowGateRepository;
 import com.acme.exchange.persistence.MessageRepository;
 import com.acme.exchange.persistence.MessageSubscriberRepository;
@@ -30,6 +31,7 @@ public class PublishService {
     private final FlowGateRepository flowGateRepository;
     private final MessageRepository messageRepository;
     private final MessageSubscriberRepository messageSubscriberRepository;
+    private final DeliveryRepository deliveryRepository;
     private final OutboxRepository outboxRepository;
     private final CatalogRepository catalogRepository;
     private final EnvelopeValidator envelopeValidator;
@@ -40,6 +42,7 @@ public class PublishService {
             FlowGateRepository flowGateRepository,
             MessageRepository messageRepository,
             MessageSubscriberRepository messageSubscriberRepository,
+            DeliveryRepository deliveryRepository,
             OutboxRepository outboxRepository,
             CatalogRepository catalogRepository,
             EnvelopeValidator envelopeValidator,
@@ -49,6 +52,7 @@ public class PublishService {
         this.flowGateRepository = flowGateRepository;
         this.messageRepository = messageRepository;
         this.messageSubscriberRepository = messageSubscriberRepository;
+        this.deliveryRepository = deliveryRepository;
         this.outboxRepository = outboxRepository;
         this.catalogRepository = catalogRepository;
         this.envelopeValidator = envelopeValidator;
@@ -109,6 +113,7 @@ public class PublishService {
         List<SubscriberBinding> subscribers = catalogRepository.findSubscribers(
                 command.tenantId(), command.flowId(), accepted.revision());
         messageSubscriberRepository.insertExpected(accepted, subscribers);
+        deliveryRepository.stagePullDeliveries(accepted, subscribers);
         outboxRepository.enqueue(accepted);
 
         return new Acceptance(accepted.messageId(), accepted.acceptedAt(), false);

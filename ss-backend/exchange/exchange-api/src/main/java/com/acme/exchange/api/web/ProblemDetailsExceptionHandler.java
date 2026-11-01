@@ -2,9 +2,11 @@ package com.acme.exchange.api.web;
 
 import com.acme.exchange.domain.EnvelopeValidationException;
 import com.acme.exchange.domain.FlowNotActiveException;
+import com.acme.exchange.domain.LeaseLostException;
 import com.acme.exchange.domain.MessageIdConflictException;
 import com.acme.exchange.domain.MessageNotFoundException;
 import com.acme.exchange.domain.PayloadTooLargeException;
+import com.acme.exchange.domain.SubscriberNotBoundException;
 import com.acme.exchange.domain.SchemaValidationException;
 import com.acme.exchange.domain.StaleRevisionException;
 import org.slf4j.Logger;
@@ -70,6 +72,23 @@ public class ProblemDetailsExceptionHandler {
     @ExceptionHandler(MessageNotFoundException.class)
     ResponseEntity<ProblemDetail> handleMessageNotFound(MessageNotFoundException exception) {
         return problem(HttpStatus.NOT_FOUND, "MESSAGE_NOT_FOUND",
+                exception.getMessage(), false);
+    }
+
+    @ExceptionHandler(LeaseLostException.class)
+    ResponseEntity<ProblemDetail> handleLeaseLost(LeaseLostException exception) {
+        ResponseEntity<ProblemDetail> response = problem(
+                HttpStatus.CONFLICT,
+                "LEASE_LOST",
+                exception.getMessage(),
+                false);
+        response.getBody().setProperty("deliveryId", exception.deliveryId().toString());
+        return response;
+    }
+
+    @ExceptionHandler(SubscriberNotBoundException.class)
+    ResponseEntity<ProblemDetail> handleSubscriberNotBound(SubscriberNotBoundException exception) {
+        return problem(HttpStatus.FORBIDDEN, "SUBSCRIBER_NOT_BOUND",
                 exception.getMessage(), false);
     }
 

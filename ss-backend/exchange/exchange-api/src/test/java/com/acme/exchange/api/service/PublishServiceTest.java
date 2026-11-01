@@ -16,6 +16,7 @@ import com.acme.exchange.domain.StaleRevisionException;
 import com.acme.exchange.domain.SubscriberBinding;
 import com.acme.exchange.domain.ValidatedEnvelope;
 import com.acme.exchange.persistence.CatalogRepository;
+import com.acme.exchange.persistence.DeliveryRepository;
 import com.acme.exchange.persistence.FlowGateRepository;
 import com.acme.exchange.persistence.MessageRepository;
 import com.acme.exchange.persistence.MessageSubscriberRepository;
@@ -53,6 +54,8 @@ class PublishServiceTest {
     @Mock
     private MessageSubscriberRepository messageSubscriberRepository;
     @Mock
+    private DeliveryRepository deliveryRepository;
+    @Mock
     private OutboxRepository outboxRepository;
     @Mock
     private CatalogRepository catalogRepository;
@@ -72,6 +75,7 @@ class PublishServiceTest {
                 flowGateRepository,
                 messageRepository,
                 messageSubscriberRepository,
+                deliveryRepository,
                 outboxRepository,
                 catalogRepository,
                 envelopeValidator,
@@ -105,6 +109,7 @@ class PublishServiceTest {
         assertThat(result.replayed()).isFalse();
         verify(flowSchemaValidator).validate("{\"type\":\"object\"}", envelope);
         verify(messageSubscriberRepository).insertExpected(accepted, List.of(binding));
+        verify(deliveryRepository).stagePullDeliveries(accepted, List.of(binding));
         verify(outboxRepository).enqueue(accepted);
     }
 
@@ -127,7 +132,7 @@ class PublishServiceTest {
                 .hasMessageContaining("bad envelope");
 
         verify(messageRepository, never()).insertIfAbsent(any(), any(), any(), any(), any());
-        verifyNoInteractions(outboxRepository);
+        verifyNoInteractions(deliveryRepository, outboxRepository);
     }
 
     @Test
@@ -148,7 +153,7 @@ class PublishServiceTest {
 
         verifyNoInteractions(flowSchemaValidator);
         verify(messageRepository, never()).insertIfAbsent(any(), any(), any(), any(), any());
-        verifyNoInteractions(outboxRepository);
+        verifyNoInteractions(deliveryRepository, outboxRepository);
     }
 
     @Test

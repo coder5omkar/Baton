@@ -46,6 +46,8 @@ public class SecurityConfig {
                         .hasAuthority("SCOPE_exchange.publish")
                         .requestMatchers(HttpMethod.GET, "/v1/flows/*/publications/*")
                         .hasAuthority("SCOPE_exchange.publish")
+                        .requestMatchers("/v1/deliveries/**")
+                        .hasAuthority("SCOPE_exchange.consume")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.decoder(jwtDecoder)))
                 .build();

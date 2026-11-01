@@ -16,10 +16,11 @@ transactional outbox path:
 
 - `POST /v1/flows/{flowId}/messages`
 - CloudEvents and active-revision JSON Schema validation
-- message, expected subscriber snapshot, and outbox row committed in one
-  transaction before `202 Accepted`
+- message, expected subscriber snapshot, PULL delivery rows, and outbox row
+  committed in one transaction before `202 Accepted`
 - idempotent replay and message-ID conflict detection
 - outbox dispatcher with `SKIP LOCKED`, leases, fences, and retries
+- polling lease/renew/settle with opaque tokens and retry/quarantine
 - Flyway schema and Testcontainers integration tests
 
 ## Quick start

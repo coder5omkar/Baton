@@ -38,10 +38,15 @@ public class JwtTenantFilter extends OncePerRequestFilter {
             if (tenantId != null && !tenantId.isBlank()) {
                 TenantContext.set(tenantId);
             }
+            String subscriberId = jwtAuthentication.getToken().getClaimAsString("subscriber_id");
+            if (subscriberId != null && !subscriberId.isBlank()) {
+                SubscriberContext.set(subscriberId);
+            }
         }
         try {
             filterChain.doFilter(request, response);
         } finally {
+            SubscriberContext.clear();
             TenantContext.clear();
         }
     }

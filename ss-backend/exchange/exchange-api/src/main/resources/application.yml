@@ -27,6 +27,9 @@ exchange:
   message:
     max-inline-bytes: 131072
     retention: 30d
+  delivery:
+    lease: 60s
+    max-lease-budget: 15m
   security:
     issuer: ${EXCHANGE_JWT_ISSUER:https://login.microsoftonline.com/common/v2.0}
     audience: ${EXCHANGE_JWT_AUDIENCE:api://exchange}

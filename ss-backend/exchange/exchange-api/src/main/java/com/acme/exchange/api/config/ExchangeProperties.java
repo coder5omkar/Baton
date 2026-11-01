@@ -8,10 +8,15 @@ import java.time.Duration;
 public class ExchangeProperties {
 
     private final Message message = new Message();
+    private final Delivery delivery = new Delivery();
     private final Security security = new Security();
 
     public Message getMessage() {
         return message;
+    }
+
+    public Delivery getDelivery() {
+        return delivery;
     }
 
     public Security getSecurity() {
@@ -37,6 +42,28 @@ public class ExchangeProperties {
 
         public void setRetention(Duration retention) {
             this.retention = retention;
+        }
+    }
+
+    public static class Delivery {
+
+        private Duration lease = Duration.ofSeconds(60);
+        private Duration maxLeaseBudget = Duration.ofMinutes(15);
+
+        public Duration getLease() {
+            return lease;
+        }
+
+        public void setLease(Duration lease) {
+            this.lease = lease;
+        }
+
+        public Duration getMaxLeaseBudget() {
+            return maxLeaseBudget;
+        }
+
+        public void setMaxLeaseBudget(Duration maxLeaseBudget) {
+            this.maxLeaseBudget = maxLeaseBudget;
         }
     }
 
